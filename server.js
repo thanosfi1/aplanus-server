@@ -9,8 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // Εισαγωγή των κλειδιών VAPID
-const PUBLIC_VAPID = "BOkXLuOX7VtIp15_A-zS69gQNqSXdQIjw95omJLxN9zsUmPwzgf9SSvgvqSkJGszK7Sxv_b7pgIy0VeguOVY8_Y
-";
+const PUBLIC_VAPID = "BOkXLuOX7VtIp15_A-zS69gQNqSXdQIjw95omJLxN9zsUmPwzgf9SSvgvqSkJGszK7Sxv_b7pgIy0VeguOVY8_Y";
 const PRIVATE_VAPID = "UmPwzgf9SSvgvqSkJGszK7Sxv_b7pgIy0VeguOVY8_Y";
 
 webpush.setVapidDetails('mailto:aplanus@app.com', PUBLIC_VAPID, PRIVATE_VAPID);
