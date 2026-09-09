@@ -8,22 +8,29 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Διαβάζουμε τα κλειδιά από τα Environment Variables του Render
+// Ανάγνωση στοιχείων από τα Environment Variables του Render
 const PUBLIC_VAPID_KEY = process.env.VAPID_PUBLIC_KEY;
 const PRIVATE_VAPID_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:thanosfotis3@gmail.com';
 
-webpush.setVapidDetails(
-  'mailto:thanosfotis@gmail.com',
-  PUBLIC_VAPID_KEY,
-  PRIVATE_VAPID_KEY
-);
+if (PUBLIC_VAPID_KEY && PRIVATE_VAPID_KEY) {
+  webpush.setVapidDetails(
+    VAPID_SUBJECT,
+    PUBLIC_VAPID_KEY,
+    PRIVATE_VAPID_KEY
+  );
+} else {
+  console.error('ΠΡΟΣΟΧΗ: Τα VAPID_PUBLIC_KEY ή VAPID_PRIVATE_KEY δεν έχουν οριστεί στο Render!');
+}
 
 let clients = [];
 
+// Keep-Alive endpoint
 app.get('/ping', (req, res) => {
   res.status(200).send('Pong!');
 });
 
+// Endpoint εγγραφής συσκευής
 app.post('/api/subscribe', (req, res) => {
   const subscription = req.body;
 
@@ -40,6 +47,7 @@ app.post('/api/subscribe', (req, res) => {
   res.status(200).json({ success: true });
 });
 
+// Endpoint δοκιμαστικής αποστολής
 app.get('/api/test-notify', async (req, res) => {
   const payload = JSON.stringify({
     title: 'APLANUS Test',
@@ -55,7 +63,7 @@ app.get('/api/test-notify', async (req, res) => {
       activeClients.push(client);
       sent++;
     } catch (err) {
-      console.error('Αποτυχία αποστολής σε client:', err.statusCode || err);
+      console.error('Αποτυχία αποστολής σε client:', err.statusCode || err.message || err);
       if (err.statusCode !== 404 && err.statusCode !== 410) {
         activeClients.push(client);
       }
