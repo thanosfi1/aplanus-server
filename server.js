@@ -51,7 +51,7 @@ app.post('/api/subscribe', (req, res) => {
 app.get('/api/test-notify', async (req, res) => {
   const payload = JSON.stringify({
     title: 'APLANUS',
-    body: 'Η ειδοποίηση λειτουργεί άψογα!'
+    body: 'τεστ 123'
   });
 
   let sent = 0;
