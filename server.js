@@ -25,7 +25,7 @@ if (PUBLIC_VAPID_KEY && PRIVATE_VAPID_KEY) {
 
 let clients = [];
 
-// Keep-Alive endpoint
+// Keep-Alive endpoint για UptimeRobot
 app.get('/ping', (req, res) => {
   res.status(200).send('Pong!');
 });
@@ -50,7 +50,7 @@ app.post('/api/subscribe', (req, res) => {
 // Endpoint δοκιμαστικής αποστολής
 app.get('/api/test-notify', async (req, res) => {
   const payload = JSON.stringify({
-    title: 'APLANUS Test',
+    title: 'APLANUS',
     body: 'Η ειδοποίηση λειτουργεί άψογα!'
   });
 
