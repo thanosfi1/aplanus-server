@@ -26,6 +26,24 @@ app.post('/api/subscribe', (req, res) => {
   clients.push({ subscription, coords });
   res.status(200).json({ status: 'ok' });
 });
+app.get('/api/test-notify', async (req, res) => {
+  const payload = JSON.stringify({
+    title: 'APLANUS Test',
+    body: 'Η δοκιμαστική ειδοποίηση λειτουργεί άψογα!'
+  });
+
+  let sent = 0;
+  for (const client of clients) {
+    try {
+      await webpush.sendNotification(client, payload);
+      sent++;
+    } catch (err) {
+      console.error('Error sending test notification:', err);
+    }
+  }
+
+  res.send(`Στάλθηκε δοκιμαστική ειδοποίηση σε ${sent} συσκευές!`);
+});
 
 // Έλεγχος κάθε 5 λεπτά για επερχόμενες ανατολές
 cron.schedule('*/5 * * * *', () => {
