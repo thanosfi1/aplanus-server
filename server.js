@@ -1,7 +1,6 @@
 const express = require('express');
 const webpush = require('web-push');
 const cors = require('cors');
-const Astronomy = require('astronomy-engine');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// VAPID Configuration
+// Ρύθμιση VAPID
 const PUBLIC_VAPID_KEY = process.env.VAPID_PUBLIC_KEY;
 const PRIVATE_VAPID_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:thanosfotis3@gmail.com';
@@ -21,49 +20,9 @@ if (PUBLIC_VAPID_KEY && PRIVATE_VAPID_KEY) {
 }
 
 let clients = [];
-
-// Τοποθεσία παρατήρησης
-const OBSERVER = new Astronomy.Observer(40.76, 22.58, 20);
-
-// Ορισμός τροχιακών στοιχείων για Δήμητρα και Εστία (J2000 epoch)
-// 1 Ceres
-const CERES_BODY = Astronomy.DefineAsteroid(
-  'Ceres',
-  2.767,             // semi-major axis (AU)
-  0.0789,            // eccentricity
-  10.59,             // inclination (degrees)
-  80.31,             // longitude of ascending node (degrees)
-  73.59,             // argument of perihelion (degrees)
-  95.98,             // mean anomaly (degrees)
-  2451545.0          // epoch (J2000.0)
-);
-
-// 4 Vesta
-const VESTA_BODY = Astronomy.DefineAsteroid(
-  'Vesta',
-  2.362,             // semi-major axis (AU)
-  0.0886,            // eccentricity
-  7.14,              // inclination (degrees)
-  103.85,            // longitude of ascending node (degrees)
-  151.20,            // argument of perihelion (degrees)
-  20.86,             // mean anomaly (degrees)
-  2451545.0          // epoch (J2000.0)
-);
-
-// Πλήρης λίστα ουράνιων σωμάτων
-const PLANETS = [
-  { body: Astronomy.Body.Mercury, name: 'ο Ερμής' },
-  { body: Astronomy.Body.Venus,   name: 'η Αφροδίτη' },
-  { body: Astronomy.Body.Mars,    name: 'ο Άρης' },
-  { body: Astronomy.Body.Jupiter, name: 'ο Δίας' },
-  { body: Astronomy.Body.Saturn,  name: 'ο Κρόνος' },
-  { body: Astronomy.Body.Uranus,  name: 'ο Ουρανός' },
-  { body: Astronomy.Body.Neptune, name: 'ο Ποσειδώνας' },
-  { body: Astronomy.Body.Pluto,   name: 'ο Πλούτωνας' },
-  { body: CERES_BODY,             name: 'η Δήμητρα (1 Ceres)' },
-  { body: VESTA_BODY,             name: 'η Εστία (4 Vesta)' }
-];
-
+// Αποθήκευση του ενιαίου προγράμματος ανατολών από το frontend
+// Format κάθε αντικειμένου: { name: 'ο Δίας', riseTimestamp: 1726010000000 }
+let celestialSchedule = [];
 const sentAlerts = new Set();
 
 async function broadcast(bodyText) {
@@ -80,7 +39,6 @@ async function broadcast(bodyText) {
       await webpush.sendNotification(client, payload);
       activeClients.push(client);
     } catch (err) {
-      console.error('Σφάλμα αποστολής:', err.statusCode || err.message);
       if (err.statusCode !== 404 && err.statusCode !== 410) {
         activeClients.push(client);
       }
@@ -89,47 +47,42 @@ async function broadcast(bodyText) {
   clients = activeClients;
 }
 
-// Αυτόματος έλεγχος ανά λεπτό
+// Αυτόνομος έλεγχος ανά λεπτό για ειδοποιήσεις
 setInterval(() => {
-  const now = new Date();
-  const dateKey = now.toISOString().slice(0, 10);
+  const now = Date.now();
+  const todayKey = new Date().toISOString().slice(0, 10);
 
   // 1. Καθημερινό Alert στις 20:00 (Ώρα Ελλάδας UTC+3)
-  const greeceHour = (now.getUTCHours() + 3) % 24;
-  const greeceMinutes = now.getUTCMinutes();
-  const dailyKey = `daily-summary-${dateKey}`;
+  const greeceHour = (new Date().getUTCHours() + 3) % 24;
+  const greeceMinutes = new Date().getUTCMinutes();
+  const dailyKey = `daily-summary-${todayKey}`;
 
-  if (greeceHour === 20 && greeceMinutes === 0 && !sentAlerts.has(dailyKey)) {
+  if (greeceHour === 20 && greeceMinutes === 0 && !sentAlerts.has(dailyKey) && celestialSchedule.length > 0) {
     sentAlerts.add(dailyKey);
     let summaryText = '🔭 Αποψινές ανατολές:\n';
-    for (const p of PLANETS) {
-      const nextRise = Astronomy.SearchRiseSet(p.body, OBSERVER, +1, now, 1);
-      if (nextRise && nextRise.date) {
-        const riseDate = new Date(nextRise.date.getTime() + 3 * 3600000);
-        summaryText += `• ${p.name}: ${riseDate.toISOString().slice(11, 16)}\n`;
-      }
-    }
+    celestialSchedule.forEach(item => {
+      const d = new Date(item.riseTimestamp + 3 * 3600000);
+      summaryText += `• ${item.name}: ${d.toISOString().slice(11, 16)}\n`;
+    });
     broadcast(summaryText.trim());
   }
 
-  // 2. Ειδοποιήσεις 15 λεπτά πριν & ακριβώς στην ανατολή
-  for (const p of PLANETS) {
-    const riseInfo = Astronomy.SearchRiseSet(p.body, OBSERVER, +1, now, 1);
-    if (!riseInfo || !riseInfo.date) continue;
+  // 2. Έλεγχος συμβάντων (-15 λεπτά και 0 λεπτά)
+  for (const item of celestialSchedule) {
+    const diffMinutes = Math.round((item.riseTimestamp - now) / 60000);
 
-    const diffMinutes = Math.round((riseInfo.date.getTime() - now.getTime()) / 60000);
-    const eventHour = riseInfo.date.getUTCHours();
-
-    const preKey = `pre-15-${p.name}-${dateKey}-${eventHour}`;
+    // 15 λεπτά πριν
+    const preKey = `pre-15-${item.name}-${todayKey}-${Math.floor(item.riseTimestamp / 3600000)}`;
     if (diffMinutes >= 14 && diffMinutes <= 16 && !sentAlerts.has(preKey)) {
       sentAlerts.add(preKey);
-      broadcast(`✨ Σε 15 λεπτά ανατέλλει ${p.name}!`);
+      broadcast(`✨ Σε 15 λεπτά ανατέλλει ${item.name}!`);
     }
 
-    const riseKey = `rise-now-${p.name}-${dateKey}-${eventHour}`;
+    // Ακριβώς στην ανατολή
+    const riseKey = `rise-now-${item.name}-${todayKey}-${Math.floor(item.riseTimestamp / 3600000)}`;
     if (diffMinutes >= 0 && diffMinutes <= 1 && !sentAlerts.has(riseKey)) {
       sentAlerts.add(riseKey);
-      broadcast(`🪐 Ανατέλλει τώρα ${p.name}!`);
+      broadcast(`🪐 Ανατέλλει τώρα ${item.name}!`);
     }
   }
 
@@ -147,29 +100,33 @@ app.post('/api/subscribe', (req, res) => {
   if (!clients.some(c => c.endpoint === subscription.endpoint)) {
     clients.push(subscription);
   }
-  console.log(`Νέα συσκευή! Σύνολο: ${clients.length}`);
-  res.status(200).json({ success: true });
+  res.status(200).json({ success: true, count: clients.length });
 });
 
+// Νέο Endpoint: Συγχρονισμός ωρών από το frontend
+app.post('/api/sync-schedule', (req, res) => {
+  const { schedule } = req.body;
+  if (!Array.isArray(schedule)) {
+    return res.status(400).json({ error: 'Απαιτείται πίνακας schedule' });
+  }
+
+  celestialSchedule = schedule;
+  console.log(`Συγχρονίστηκαν επιτυχώς ${celestialSchedule.length} σώματα από το frontend.`);
+  res.status(200).json({ success: true, total: celestialSchedule.length });
+});
+
+// Έλεγχος τρέχοντος προγράμματος
 app.get('/api/check-planets', (req, res) => {
-  const now = new Date();
-  const results = PLANETS.map(p => {
-    const riseInfo = Astronomy.SearchRiseSet(p.body, OBSERVER, +1, now, 1);
-    if (!riseInfo || !riseInfo.date) {
-      return { planet: p.name, error: 'Δεν βρέθηκε ανατολή' };
-    }
-    const diffMinutes = Math.round((riseInfo.date.getTime() - now.getTime()) / 60000);
-    const greeceTime = new Date(riseInfo.date.getTime() + 3 * 3600000).toISOString().slice(11, 16);
-    return {
-      planet: p.name,
-      riseTimeGreece: greeceTime,
-      minutesUntilRise: diffMinutes
-    };
-  });
+  const now = Date.now();
+  const preview = celestialSchedule.map(item => ({
+    name: item.name,
+    riseTimeGreece: new Date(item.riseTimestamp + 3 * 3600000).toISOString().slice(11, 16),
+    minutesUntilRise: Math.round((item.riseTimestamp - now) / 60000)
+  }));
 
   res.json({
-    serverTimeUTC: now.toISOString(),
-    planets: results
+    totalTracked: celestialSchedule.length,
+    planets: preview
   });
 });
 
