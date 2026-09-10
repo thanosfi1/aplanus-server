@@ -25,6 +25,31 @@ let clients = [];
 // Τοποθεσία παρατήρησης
 const OBSERVER = new Astronomy.Observer(40.76, 22.58, 20);
 
+// Ορισμός τροχιακών στοιχείων για Δήμητρα και Εστία (J2000 epoch)
+// 1 Ceres
+const CERES_BODY = Astronomy.DefineAsteroid(
+  'Ceres',
+  2.767,             // semi-major axis (AU)
+  0.0789,            // eccentricity
+  10.59,             // inclination (degrees)
+  80.31,             // longitude of ascending node (degrees)
+  73.59,             // argument of perihelion (degrees)
+  95.98,             // mean anomaly (degrees)
+  2451545.0          // epoch (J2000.0)
+);
+
+// 4 Vesta
+const VESTA_BODY = Astronomy.DefineAsteroid(
+  'Vesta',
+  2.362,             // semi-major axis (AU)
+  0.0886,            // eccentricity
+  7.14,              // inclination (degrees)
+  103.85,            // longitude of ascending node (degrees)
+  151.20,            // argument of perihelion (degrees)
+  20.86,             // mean anomaly (degrees)
+  2451545.0          // epoch (J2000.0)
+);
+
 // Πλήρης λίστα ουράνιων σωμάτων
 const PLANETS = [
   { body: Astronomy.Body.Mercury, name: 'ο Ερμής' },
@@ -34,7 +59,9 @@ const PLANETS = [
   { body: Astronomy.Body.Saturn,  name: 'ο Κρόνος' },
   { body: Astronomy.Body.Uranus,  name: 'ο Ουρανός' },
   { body: Astronomy.Body.Neptune, name: 'ο Ποσειδώνας' },
-  { body: Astronomy.Body.Pluto,   name: 'ο Πλούτωνας' }
+  { body: Astronomy.Body.Pluto,   name: 'ο Πλούτωνας' },
+  { body: CERES_BODY,             name: 'η Δήμητρα (1 Ceres)' },
+  { body: VESTA_BODY,             name: 'η Εστία (4 Vesta)' }
 ];
 
 const sentAlerts = new Set();
