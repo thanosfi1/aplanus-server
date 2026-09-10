@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Ρύθμιση VAPID
+// VAPID Configuration
 const PUBLIC_VAPID_KEY = process.env.VAPID_PUBLIC_KEY;
 const PRIVATE_VAPID_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:thanosfotis3@gmail.com';
@@ -22,21 +22,23 @@ if (PUBLIC_VAPID_KEY && PRIVATE_VAPID_KEY) {
 
 let clients = [];
 
-// Προεπιλεγμένη τοποθεσία παρατήρησης (Κεντρική Μακεδονία / Θεσσαλονίκη)
+// Τοποθεσία παρατήρησης
 const OBSERVER = new Astronomy.Observer(40.76, 22.58, 20);
 
-// Πλανήτες προς παρακολούθηση
+// Πλήρης λίστα ουράνιων σωμάτων
 const PLANETS = [
-  { body: Astronomy.Body.Venus, name: 'η Αφροδίτη' },
-  { body: Astronomy.Body.Mars, name: 'ο Άρης' },
+  { body: Astronomy.Body.Mercury, name: 'ο Ερμής' },
+  { body: Astronomy.Body.Venus,   name: 'η Αφροδίτη' },
+  { body: Astronomy.Body.Mars,    name: 'ο Άρης' },
   { body: Astronomy.Body.Jupiter, name: 'ο Δίας' },
-  { body: Astronomy.Body.Saturn, name: 'ο Κρόνος' }
+  { body: Astronomy.Body.Saturn,  name: 'ο Κρόνος' },
+  { body: Astronomy.Body.Uranus,  name: 'ο Ουρανός' },
+  { body: Astronomy.Body.Neptune, name: 'ο Ποσειδώνας' },
+  { body: Astronomy.Body.Pluto,   name: 'ο Πλούτωνας' }
 ];
 
-// Αποφυγή διπλών ειδοποιήσεων
 const sentAlerts = new Set();
 
-// Συνάρτηση αποστολής push notification
 async function broadcast(bodyText) {
   if (clients.length === 0) return;
 
@@ -60,31 +62,30 @@ async function broadcast(bodyText) {
   clients = activeClients;
 }
 
-// Αυτόνομος ελεγκτής: Εκτελείται κάθε 60 δευτερόλεπτα
+// Αυτόματος έλεγχος ανά λεπτό
 setInterval(() => {
   const now = new Date();
   const dateKey = now.toISOString().slice(0, 10);
 
-  // 1. Καθημερινό Alert στις 20:00 Ώρα Ελλάδας (UTC+3)
+  // 1. Καθημερινό Alert στις 20:00 (Ώρα Ελλάδας UTC+3)
   const greeceHour = (now.getUTCHours() + 3) % 24;
   const greeceMinutes = now.getUTCMinutes();
   const dailyKey = `daily-summary-${dateKey}`;
 
   if (greeceHour === 20 && greeceMinutes === 0 && !sentAlerts.has(dailyKey)) {
     sentAlerts.add(dailyKey);
-    let summaryText = '🔭 Αποψινές ανατολές πλανητών:\n';
+    let summaryText = '🔭 Αποψινές ανατολές:\n';
     for (const p of PLANETS) {
       const nextRise = Astronomy.SearchRiseSet(p.body, OBSERVER, +1, now, 1);
       if (nextRise && nextRise.date) {
-        const riseDate = new Date(nextRise.date.getTime() + 3 * 3600000); // ώρα Ελλάδας
-        const timeStr = riseDate.toISOString().slice(11, 16);
-        summaryText += `• ${p.name}: ${timeStr}\n`;
+        const riseDate = new Date(nextRise.date.getTime() + 3 * 3600000);
+        summaryText += `• ${p.name}: ${riseDate.toISOString().slice(11, 16)}\n`;
       }
     }
     broadcast(summaryText.trim());
   }
 
-  // 2. Έλεγχος σε πραγματικό χρόνο για κάθε πλανήτη (-15 λεπτά & 0 λεπτά)
+  // 2. Ειδοποιήσεις 15 λεπτά πριν & ακριβώς στην ανατολή
   for (const p of PLANETS) {
     const riseInfo = Astronomy.SearchRiseSet(p.body, OBSERVER, +1, now, 1);
     if (!riseInfo || !riseInfo.date) continue;
@@ -92,14 +93,12 @@ setInterval(() => {
     const diffMinutes = Math.round((riseInfo.date.getTime() - now.getTime()) / 60000);
     const eventHour = riseInfo.date.getUTCHours();
 
-    // Ειδοποίηση 15 λεπτά πριν
     const preKey = `pre-15-${p.name}-${dateKey}-${eventHour}`;
     if (diffMinutes >= 14 && diffMinutes <= 16 && !sentAlerts.has(preKey)) {
       sentAlerts.add(preKey);
       broadcast(`✨ Σε 15 λεπτά ανατέλλει ${p.name}!`);
     }
 
-    // Ειδοποίηση ακριβώς στην ανατολή
     const riseKey = `rise-now-${p.name}-${dateKey}-${eventHour}`;
     if (diffMinutes >= 0 && diffMinutes <= 1 && !sentAlerts.has(riseKey)) {
       sentAlerts.add(riseKey);
@@ -107,8 +106,7 @@ setInterval(() => {
     }
   }
 
-  // Καθαρισμός παλιών εγγραφών
-  if (sentAlerts.size > 200) sentAlerts.clear();
+  if (sentAlerts.size > 300) sentAlerts.clear();
 }, 60000);
 
 // Endpoints
@@ -122,16 +120,10 @@ app.post('/api/subscribe', (req, res) => {
   if (!clients.some(c => c.endpoint === subscription.endpoint)) {
     clients.push(subscription);
   }
-  console.log(`Νέα συσκευή συνδέθηκε! Σύνολο συσκευών: ${clients.length}`);
+  console.log(`Νέα συσκευή! Σύνολο: ${clients.length}`);
   res.status(200).json({ success: true });
 });
 
-// Endpoint δοκιμής
-app.get('/api/test-notify', async (req, res) => {
-  await broadcast('τεστ 123');
-  res.status(200).send(`Στάλθηκε δοκιμαστική ειδοποίηση σε ${clients.length} συσκευές!`);
-});
-// Endpoint ελέγχου επόμενων ανατολών
 app.get('/api/check-planets', (req, res) => {
   const now = new Date();
   const results = PLANETS.map(p => {
@@ -152,6 +144,11 @@ app.get('/api/check-planets', (req, res) => {
     serverTimeUTC: now.toISOString(),
     planets: results
   });
+});
+
+app.get('/api/test-notify', async (req, res) => {
+  await broadcast('τεστ 123');
+  res.status(200).send(`Στάλθηκε δοκιμαστική ειδοποίηση σε ${clients.length} συσκευές!`);
 });
 
 app.listen(PORT, () => {
