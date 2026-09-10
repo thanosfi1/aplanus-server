@@ -131,6 +131,28 @@ app.get('/api/test-notify', async (req, res) => {
   await broadcast('τεστ 123');
   res.status(200).send(`Στάλθηκε δοκιμαστική ειδοποίηση σε ${clients.length} συσκευές!`);
 });
+// Endpoint ελέγχου επόμενων ανατολών
+app.get('/api/check-planets', (req, res) => {
+  const now = new Date();
+  const results = PLANETS.map(p => {
+    const riseInfo = Astronomy.SearchRiseSet(p.body, OBSERVER, +1, now, 1);
+    if (!riseInfo || !riseInfo.date) {
+      return { planet: p.name, error: 'Δεν βρέθηκε ανατολή' };
+    }
+    const diffMinutes = Math.round((riseInfo.date.getTime() - now.getTime()) / 60000);
+    const greeceTime = new Date(riseInfo.date.getTime() + 3 * 3600000).toISOString().slice(11, 16);
+    return {
+      planet: p.name,
+      riseTimeGreece: greeceTime,
+      minutesUntilRise: diffMinutes
+    };
+  });
+
+  res.json({
+    serverTimeUTC: now.toISOString(),
+    planets: results
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Ο server του APLANUS τρέχει στη θύρα ${PORT}`);
