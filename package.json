@@ -1,15 +1,15 @@
 {
-  "name": "aplanus-server",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "web-push": "^3.6.7",
-    "cors": "^2.8.5",
-    "node-cron": "^3.0.3",
-    "astronomy-engine": "^2.1.19"
-  }
+"name": "aplanus-server",
+"version": "1.0.0",
+"description": "Backend Push Server για το APLANUS",
+"main": "server.js",
+"scripts": {
+"start": "node server.js"
+},
+"dependencies": {
+"astronomy-engine": "^2.1.19",
+"cors": "^2.8.5",
+"express": "^4.18.2",
+"web-push": "^3.6.7"
+}
 }
