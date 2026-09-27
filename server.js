@@ -52,22 +52,7 @@ setInterval(() => {
   const now = Date.now();
   const todayKey = new Date().toISOString().slice(0, 10);
 
-  // 1. Καθημερινό Alert στις 20:00 (Ώρα Ελλάδας UTC+3)
-  const greeceHour = (new Date().getUTCHours() + 3) % 24;
-  const greeceMinutes = new Date().getUTCMinutes();
-  const dailyKey = `daily-summary-${todayKey}`;
-
-  if (greeceHour === 20 && greeceMinutes === 0 && !sentAlerts.has(dailyKey) && celestialSchedule.length > 0) {
-    sentAlerts.add(dailyKey);
-    let summaryText = '🔭 Αποψινές ανατολές:\n';
-    celestialSchedule.forEach(item => {
-      const d = new Date(item.riseTimestamp + 3 * 3600000);
-      summaryText += `• ${item.name}: ${d.toISOString().slice(11, 16)}\n`;
-    });
-    broadcast(summaryText.trim());
-  }
-
-  // 2. Έλεγχος συμβάντων (-15 λεπτά και 0 λεπτά)
+  // Έλεγχος συμβάντων (-15 λεπτά και 0 λεπτά)
   for (const item of celestialSchedule) {
     const diffMinutes = Math.round((item.riseTimestamp - now) / 60000);
 
@@ -128,11 +113,6 @@ app.get('/api/check-planets', (req, res) => {
     totalTracked: celestialSchedule.length,
     planets: preview
   });
-});
-
-app.get('/api/test-notify', async (req, res) => {
-  await broadcast('τεστ 123');
-  res.status(200).send(`Στάλθηκε δοκιμαστική ειδοποίηση σε ${clients.length} συσκευές!`);
 });
 
 app.listen(PORT, () => {
